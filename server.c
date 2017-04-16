@@ -5,12 +5,48 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <sys/stat.h>
 
 #define PORT 12345
 #define BACKLOG 10
 
+void handle_sub_request(struct sockaddr_in client, const char *topic)
+{
+	return;
+}
+
+void handle_pub_request(const char *topic, const char *msg)
+{
+	return;
+}
+
 void handle_connection(int fd, struct sockaddr_in addr)
 {
+	char buf[34];
+	char topic[17];
+	char msg[17];
+
+	memset(buf, '\0', 34);
+	memset(topic, '\0', 17);
+	memset(msg, '\0', 17);
+
+	if(recv(fd, buf, 33, 0) == -1)
+	{
+		printf("Funkcja recv() zwróciła błąd\n");
+		return;
+	}
+
+	strncpy(topic, &buf[1], 16);
+	strncpy(msg, &buf[17], 16);
+
+	if(buf[0] == 's')
+		handle_sub_request(addr, topic);
+	else if(buf[0] == 'p')
+		handle_pub_request(topic, msg);
+	else
+		printf("Nieprawidłowe żądanie od klienta\n");
+
+	close(fd);
 	return;
 }
 
@@ -21,7 +57,20 @@ int main()
 	struct sockaddr_in in_addr;
 	socklen_t sin_size;
 	int yes = 1;
+	struct stat st;
 
+	//ścieżka w której będą przechowywane informacje o subskrybcji
+	if(stat("/tmp/pub_sub", &st) == -1)
+	{
+		mkdir("/tmp/pub_sub", 0777);
+	}
+	else
+	{
+		printf("Nie można utworzyć ścieżki");
+		return -1;
+	}
+
+	//połączenie
 	sock_fd = socket(AF_INET, SOCK_STREAM, 0);
 	if(sock_fd == -1)
 	{
