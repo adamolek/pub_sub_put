@@ -9,6 +9,7 @@
 
 #define PORT 12345
 #define BACKLOG 10
+#define DIRECTORY "/tmp/pub_sub"
 
 void handle_sub_request(struct sockaddr_in client, const char *topic)
 {
@@ -60,9 +61,9 @@ int main()
 	struct stat st;
 
 	//ścieżka w której będą przechowywane informacje o subskrybcji
-	if(stat("/tmp/pub_sub", &st) == -1)
+	if(stat(DIRECTORY, &st) == -1)
 	{
-		mkdir("/tmp/pub_sub", 0777);
+		mkdir(DIRECTORY, 0777);
 	}
 	else
 	{
