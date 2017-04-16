@@ -19,7 +19,7 @@ int main()
 	int sock_fd, in_fd;
 	struct sockaddr_in addr;
 	struct sockaddr_in in_addr;
-	int sin_size;
+	socklen_t sin_size;
 	int yes = 1;
 
 	sock_fd = socket(AF_INET, SOCK_STREAM, 0);
