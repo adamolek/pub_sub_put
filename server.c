@@ -6,23 +6,37 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <sys/stat.h>
+#include <pthread.h>
 
 #define PORT 12345
 #define BACKLOG 10
 #define DIRECTORY "/tmp/pub_sub"
 
-void handle_sub_request(struct sockaddr_in client, const char *topic)
+struct sub_req_data
 {
-	return;
+	struct sockaddr_in client;
+	char topic[17];
+};
+
+struct pub_req_data
+{
+	char topic[17];
+	char msg[17];
+};
+
+void* handle_sub_request(void *data)
+{
+	return NULL;
 }
 
-void handle_pub_request(const char *topic, const char *msg)
+void* handle_pub_request(void *data)
 {
-	return;
+	return NULL;
 }
 
 void handle_connection(int fd, struct sockaddr_in addr)
 {
+	pthread_t thread;
 	char buf[34];
 	char topic[17];
 	char msg[17];
@@ -41,9 +55,23 @@ void handle_connection(int fd, struct sockaddr_in addr)
 	strncpy(msg, &buf[17], 16);
 
 	if(buf[0] == 's')
-		handle_sub_request(addr, topic);
+	{
+		struct sub_req_data *data;
+		data = malloc(sizeof(struct sub_req_data));
+		data->client = addr;
+		strcpy(data->topic, topic);
+		if(pthread_create(&thread, NULL, handle_sub_request, data) != 0)
+			printf("Funkcja pthread_create() zwróciła błąd\n");
+	}
 	else if(buf[0] == 'p')
-		handle_pub_request(topic, msg);
+	{
+		struct pub_req_data *data;
+		data = malloc(sizeof(struct pub_req_data));
+		strcpy(data->topic, topic);
+		strcpy(data->msg, msg);
+		if(pthread_create(&thread, NULL, handle_pub_request, data) != 0)
+			printf("Funkcja pthread_create() zwróciła błąd\n");
+	}
 	else
 		printf("Nieprawidłowe żądanie od klienta\n");
 
