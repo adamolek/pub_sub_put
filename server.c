@@ -7,6 +7,8 @@
 #include <netinet/in.h>
 #include <sys/stat.h>
 #include <pthread.h>
+#include <sys/file.h>
+#include <arpa/inet.h>
 
 #define PORT 12345
 #define BACKLOG 10
@@ -24,8 +26,63 @@ struct pub_req_data
 	char msg[17];
 };
 
+int check_if_subscribed(const char *name, const char *client_ip)
+{
+	//tutaj użyto fopen itd. zamiast posixowych ze względu na możliwość
+	//odczytu pliku linijka po linijce
+	FILE *fp;
+	char *line = NULL;
+	size_t len = 0;
+
+	fp = fopen(name, "r");
+	//blokada pliku
+	while(flock(fileno(fp), LOCK_EX) != 0);
+
+	while(getline(&line, &len, fp) != -1)
+	{
+		if(strncmp(client_ip, line, len - 1) == 0)
+			return 1;
+	}
+
+	//zwolnienie blokady pliku
+	flock(fileno(fp), LOCK_UN);
+	fclose(fp);
+	free(line);
+	return 0;
+}
+
 void* handle_sub_request(void *data)
 {
+	int fd;
+	struct sub_req_data *sub_data = (struct sub_req_data*)data;
+	char is_subscribed = 0;
+	char file_name[32];
+
+	//sprawdzenie czy klient subskrubuje dany temat
+	sprintf(file_name, "%s/%s", DIRECTORY, sub_data->topic);
+	//jeśli plik istnieje to sprawdzamy czy klient subskrybuje temat
+	if(access(file_name, F_OK) != 0)
+	{
+		is_subscribed = check_if_subscribed(file_name, inet_ntoa(sub_data->client.sin_addr));
+	}
+	else
+	{
+		//jeśli plik nie istnieje tworzymy plik
+		fd = open(file_name, O_CREAT);
+		close(fd);
+	}
+
+	//jeśli nie subskrybuje
+	if(!is_subscribed)
+	{
+		fd = open(file_name, O_WRONLY | O_APPEND);
+		flock(fd, LOCK_EX);
+		write(fd, inet_ntoa(sub_data->client.sin_addr), 32);
+		write(fd, "\n", 32);
+		flock(fd, LOCK_UN);
+		close(fd);
+	}
+
 	return NULL;
 }
 
