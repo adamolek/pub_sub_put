@@ -33,6 +33,7 @@ int check_if_subscribed(const char *name, const char *client_ip)
 	FILE *fp;
 	char *line = NULL;
 	size_t len = 0;
+	int ret = 0;
 
 	fp = fopen(name, "r");
 	//blokada pliku
@@ -40,15 +41,20 @@ int check_if_subscribed(const char *name, const char *client_ip)
 
 	while(getline(&line, &len, fp) != -1)
 	{
-		if(strncmp(client_ip, line, len - 1) == 0)
-			return 1;
+		if(len < 8)
+			continue;
+		if(strncmp(client_ip, line, strlen(client_ip)) == 0)
+		{
+			 ret = 1;
+			 break;
+		}
 	}
 
 	//zwolnienie blokady pliku
 	flock(fileno(fp), LOCK_UN);
 	fclose(fp);
 	free(line);
-	return 0;
+	return ret;
 }
 
 void* handle_sub_request(void *data)
@@ -57,28 +63,29 @@ void* handle_sub_request(void *data)
 	struct sub_req_data *sub_data = (struct sub_req_data*)data;
 	char is_subscribed = 0;
 	char file_name[32];
-
 	//sprawdzenie czy klient subskrubuje dany temat
 	sprintf(file_name, "%s/%s", DIRECTORY, sub_data->topic);
 	//jeśli plik istnieje to sprawdzamy czy klient subskrybuje temat
-	if(access(file_name, F_OK) != 0)
+	if(access(file_name, F_OK) != -1)
 	{
 		is_subscribed = check_if_subscribed(file_name, inet_ntoa(sub_data->client.sin_addr));
 	}
 	else
 	{
 		//jeśli plik nie istnieje tworzymy plik
-		fd = open(file_name, O_CREAT);
+		fd = open(file_name, O_CREAT, 0666);
 		close(fd);
 	}
 
 	//jeśli nie subskrybuje
 	if(!is_subscribed)
 	{
+		char buf[32];
+		memset(buf, '\0', 32);
+		sprintf(buf, "%s\n", inet_ntoa(sub_data->client.sin_addr));
 		fd = open(file_name, O_WRONLY | O_APPEND);
 		flock(fd, LOCK_EX);
-		write(fd, inet_ntoa(sub_data->client.sin_addr), 32);
-		write(fd, "\n", 32);
+		write(fd, buf, strlen(buf));
 		flock(fd, LOCK_UN);
 		close(fd);
 	}
@@ -101,7 +108,6 @@ void handle_connection(int fd, struct sockaddr_in addr)
 	memset(buf, '\0', 34);
 	memset(topic, '\0', 17);
 	memset(msg, '\0', 17);
-
 	if(recv(fd, buf, 33, 0) == -1)
 	{
 		printf("Funkcja recv() zwróciła błąd\n");
