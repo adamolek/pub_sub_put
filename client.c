@@ -9,8 +9,25 @@
 
 #define PORT 12345
 
-void handle_connection(int fd)
+void handle_connection(int fd, char sub_pub, const char *topic, const char *msg)
 {
+	char frame[34];
+	memset(frame, '\0', 17);
+	if(sub_pub == 's')
+	{
+		frame[0] = sub_pub;
+		strncpy(frame + 1, topic, 16);
+		send(fd, frame, 33, 0);
+	}
+	else if(sub_pub == 'p')
+	{
+		printf("Publikacja\n");
+	}
+	else
+	{
+		printf("Nie prawidłowe żądanie\n");
+		return;
+	}
 	return;
 }
 
@@ -20,7 +37,7 @@ int main(int argc, char *argv[])
 	struct sockaddr_in server_addr;
 	struct hostent *he;
 
-	if(argc != 2)
+	if(argc != 4)
 	{
 		printf("Błędne wywołanie programu\n");
 		return -1;
@@ -51,7 +68,7 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
-	handle_connection(sock_fd);
+	handle_connection(sock_fd, argv[2][0], argv[3], NULL);
 	close(sock_fd);
 	return 0;
 }
