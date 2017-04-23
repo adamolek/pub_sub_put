@@ -78,7 +78,10 @@ void handle_connection(int fd, char sub_pub, const char *topic, const char *msg)
 	}
 	else if(sub_pub == 'p')
 	{
-		printf("Publikacja\n");
+		frame[0] = sub_pub;
+		strncpy(frame + 1, topic, 16);
+		strncpy(frame + 17, msg, 16);
+		send(fd, frame, 33, 0);
 	}
 	else
 	{
@@ -94,7 +97,7 @@ int main(int argc, char *argv[])
 	struct sockaddr_in server_addr;
 	struct hostent *he;
 
-	if(argc != 4)
+	if(argc != 4 && argc != 5)
 	{
 		printf("Błędne wywołanie programu\n");
 		return -1;
@@ -125,7 +128,13 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
-	handle_connection(sock_fd, argv[2][0], argv[3], NULL);
+	if(argv[2][0] == 's')
+		handle_connection(sock_fd, argv[2][0], argv[3], NULL);
+	else if(argv[2][0] == 'p')
+		handle_connection(sock_fd, argv[2][0], argv[3], argv[4]);
+	else
+		printf("Nieprawidłowe żądanie\n");
+
 	close(sock_fd);
 	return 0;
 }
