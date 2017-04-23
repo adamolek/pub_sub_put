@@ -7,7 +7,63 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 
-#define PORT 12345
+#define BACKLOG 10
+#define SERVER_PORT 12345
+#define CLIENT_PORT 23456
+
+int listen_sub(const char *topic)
+{
+	int fd;
+	int sub_fd;
+	int yes;
+	struct sockaddr_in addr;
+	struct sockaddr_in in_addr;
+	socklen_t sin_size;
+
+	fd = socket(AF_INET, SOCK_STREAM, 0);
+	if(fd == -1)
+	{
+		printf("Funkcja socket zwróciła błąd\n");
+		return -1;
+	}
+
+	if(setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1)
+	{
+		printf("Funkcja setsockopt() zwróciła błąd\n");
+		return -1;
+	}
+
+	addr.sin_family = AF_INET;
+	addr.sin_port = htons(CLIENT_PORT);
+	addr.sin_addr.s_addr = INADDR_ANY;
+	memset(&(addr.sin_zero), '\0', 8);
+
+	if(bind(fd, (struct sockaddr*)&addr, sizeof(struct sockaddr)) == -1)
+	{
+		printf("Funkcja bind() zwróciła błąd\n");
+		return -1;
+	}
+
+	if(listen(fd, BACKLOG) == -1)
+	{
+		printf("Funkcja listen() zwróciła błąd\n");
+		return -1;
+	}
+
+	while(1)
+	{
+		sin_size = sizeof(struct sockaddr_in);
+		sub_fd = accept(fd, (struct sockaddr*)&in_addr, &sin_size);
+		if(sub_fd == -1)
+		{
+			printf("Funkcja accept() zwróciła błąd\n");
+			continue;
+		}
+		//dodać odczyt komunikatów itp
+
+	}
+	return 0;
+}
 
 void handle_connection(int fd, char sub_pub, const char *topic, const char *msg)
 {
@@ -18,6 +74,7 @@ void handle_connection(int fd, char sub_pub, const char *topic, const char *msg)
 		frame[0] = sub_pub;
 		strncpy(frame + 1, topic, 16);
 		send(fd, frame, 33, 0);
+		listen_sub(topic);
 	}
 	else if(sub_pub == 'p')
 	{
@@ -58,7 +115,7 @@ int main(int argc, char *argv[])
 	}
 
 	server_addr.sin_family = AF_INET;
-	server_addr.sin_port = htons(PORT);
+	server_addr.sin_port = htons(SERVER_PORT);
 	server_addr.sin_addr = *((struct in_addr*)he->h_addr);
 	memset(&(server_addr.sin_zero), '\0', 8);
 
