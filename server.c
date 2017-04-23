@@ -94,8 +94,34 @@ void* handle_sub_request(void *data)
 	return NULL;
 }
 
+void publish(const char *ip, const char *topic, const char *msg)
+{
+	return;
+}
+
 void* handle_pub_request(void *data)
 {
+	struct pub_req_data *pub_data = (struct pub_req_data*)data;
+	FILE *fp;
+	char *line = NULL;
+	size_t len = 0;
+	char file_name[32];
+
+	sprintf(file_name, "%s/%s", DIRECTORY, pub_data->topic);
+	fp = fopen(file_name, "r");
+	//blokada pliku
+	while(flock(fileno(fp), LOCK_EX) != 0);
+
+	while(getline(&line, &len, fp) != -1)
+	{
+		if(len > 7)
+			publish(line, pub_data->topic, pub_data->msg);
+	}
+
+	//zwolnienie blokady pliku
+	flock(fileno(fp), LOCK_UN);
+	fclose(fp);
+	free(line);
 	return NULL;
 }
 
