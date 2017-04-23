@@ -24,6 +24,7 @@ struct pub_req_data
 {
 	char topic[17];
 	char msg[17];
+	struct sockaddr_in publisher;
 };
 
 int check_if_subscribed(const char *name, const char *client_ip)
@@ -132,6 +133,7 @@ void handle_connection(int fd, struct sockaddr_in addr)
 		data = malloc(sizeof(struct pub_req_data));
 		strcpy(data->topic, topic);
 		strcpy(data->msg, msg);
+		data->publisher = addr;
 		if(pthread_create(&thread, NULL, handle_pub_request, data) != 0)
 			printf("Funkcja pthread_create() zwróciła błąd\n");
 	}
