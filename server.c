@@ -11,6 +11,7 @@
 #include <arpa/inet.h>
 
 #define PORT 12345
+#define CLIENT_PORT 23456
 #define BACKLOG 10
 #define DIRECTORY "/tmp/pub_sub"
 
@@ -94,9 +95,34 @@ void* handle_sub_request(void *data)
 	return NULL;
 }
 
-void publish(const char *ip, const char *topic, const char *msg)
+int publish(const char *ip, const char *publisher_ip, const char *topic, const char *msg)
 {
-	return;
+	int fd;
+	char frame[50];
+	struct sockaddr_in subscriber;
+
+	fd = socket(AF_INET, SOCK_STREAM, 0);
+	if(fd == -1)
+		return -1;
+
+	subscriber.sin_family = AF_INET;
+	subscriber.sin_port = htons(CLIENT_PORT);
+	inet_aton(ip, &subscriber.sin_addr);
+	memset(&(subscriber.sin_zero), '\0', 8);
+
+	if(connect(fd, (struct sockaddr*)&subscriber, sizeof(struct sockaddr)) == - 1)
+		return -2;
+
+	memset(frame, '\0', 50);
+	strncpy(frame, publisher_ip, strlen(publisher_ip));
+	frame[strlen(publisher_ip)] = ':';
+	strncpy(frame + strlen(publisher_ip) + 1, topic, strlen(topic));
+	frame[strlen(topic) + strlen(publisher_ip) + 1] = ':';
+	strncpy(frame + strlen(topic) + strlen(publisher_ip) + 2, msg, strlen(msg));
+	send(fd, frame, 50, 0);
+	close(fd);
+
+	return 0;
 }
 
 void* handle_pub_request(void *data)
@@ -106,6 +132,7 @@ void* handle_pub_request(void *data)
 	char *line = NULL;
 	size_t len = 0;
 	char file_name[32];
+	char *publisher_ip = inet_ntoa(pub_data->publisher.sin_addr);
 
 	sprintf(file_name, "%s/%s", DIRECTORY, pub_data->topic);
 	fp = fopen(file_name, "r");
@@ -115,7 +142,8 @@ void* handle_pub_request(void *data)
 	while(getline(&line, &len, fp) != -1)
 	{
 		if(len > 7)
-			publish(line, pub_data->topic, pub_data->msg);
+			if(publish(line, publisher_ip, pub_data->topic, pub_data->msg) != 0)
+				printf("Publikacja nie powiodła się dla adresu %s", line);
 	}
 
 	//zwolnienie blokady pliku
