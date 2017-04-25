@@ -9,6 +9,7 @@
 #include <pthread.h>
 #include <sys/file.h>
 #include <arpa/inet.h>
+#include <signal.h>
 
 #define PORT 12345
 #define CLIENT_PORT 23456
@@ -27,6 +28,14 @@ struct pub_req_data
 	char msg[17];
 	struct sockaddr_in publisher;
 };
+
+void cleanup(int sig)
+{
+	char cmd[32];
+	sprintf(cmd, "rm -rf %s", DIRECTORY);
+	system(cmd);
+	exit(0);
+}
 
 int check_if_subscribed(const char *name, const char *client_ip)
 {
@@ -207,6 +216,8 @@ int main()
 	int yes = 1;
 	struct stat st;
 
+	//funkcja sprzątająca po serwerze
+	signal(SIGINT, cleanup);
 	//ścieżka w której będą przechowywane informacje o subskrybcji
 	if(stat(DIRECTORY, &st) == -1)
 	{
