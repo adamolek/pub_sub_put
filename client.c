@@ -6,10 +6,38 @@
 #include <sys/types.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
+#include <signal.h>
 
 #define BACKLOG 10
 #define SERVER_PORT 12345
 #define CLIENT_PORT 23456
+
+char signal_server[32];
+char signal_topic[17];
+
+void unsubscribe(int sig)
+{
+	int fd;
+	char frame[20];
+	struct hostent * he;
+	struct sockaddr_in server_addr;
+
+	he = gethostbyname(signal_server);
+	fd = socket(AF_INET, SOCK_STREAM, 0);
+
+	server_addr.sin_family = AF_INET;
+	server_addr.sin_port = htons(SERVER_PORT);
+	server_addr.sin_addr = *((struct in_addr*)he->h_addr);
+	memset(&(server_addr.sin_zero), '\0', 8);
+	connect(fd,(struct sockaddr*)&server_addr, sizeof( struct sockaddr));
+
+	memset(frame, '\0', 20);
+	frame[0] = 'u';
+	strncpy(frame + 1, signal_topic, 16);
+	send(fd, frame, 20, 0);
+	close(fd);
+	exit(0);
+}
 
 int listen_sub(const char *topic)
 {
@@ -111,6 +139,10 @@ int main(int argc, char *argv[])
 		printf("Funkcja gethostbyname() zwróciła błąd\n");
 		return -1;
 	}
+
+	strncpy(signal_server, argv[1], 31);
+	strncpy(signal_topic, argv[3], 16);
+	signal(SIGINT, unsubscribe);
 
 	sock_fd = socket(AF_INET, SOCK_STREAM, 0);
 	if(sock_fd == -1)
