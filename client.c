@@ -16,6 +16,7 @@ int listen_sub(const char *topic)
 	int fd;
 	int sub_fd;
 	int yes;
+	char frame[50];
 	struct sockaddr_in addr;
 	struct sockaddr_in in_addr;
 	socklen_t sin_size;
@@ -59,8 +60,9 @@ int listen_sub(const char *topic)
 			printf("Funkcja accept() zwróciła błąd\n");
 			continue;
 		}
-		//dodać odczyt komunikatów itp
-
+		memset(frame, '\0', 50);
+		recv(sub_fd, frame, 50, 0);
+		printf("%s\n", frame);
 	}
 	return 0;
 }
