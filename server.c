@@ -164,6 +164,45 @@ void* handle_pub_request(void *data)
 
 void* handle_unsub_request(void *data)
 {
+	struct sub_req_data *unsub_data = (struct sub_req_data*)data;
+	FILE *fp_in, *fp_out;
+	char *line = NULL;
+	size_t len = 0;
+	char file_name_in[32], file_name_out[32];
+	char *subscriber_ip = inet_ntoa(unsub_data->client.sin_addr);
+	char cmd[128];
+
+	sprintf(file_name_in, "%s/%s", DIRECTORY, unsub_data->topic);
+	fp_in = fopen(file_name_in, "r");
+	if(fp_in == NULL)
+	{
+		printf("Funkcja fopen() zwróciła błąd\n");
+		return NULL;
+	}
+
+	sprintf(file_name_out, "%s/__%s__", DIRECTORY, unsub_data->topic);
+	fp_out = fopen(file_name_out, "w+");
+	if(fp_out == NULL)
+	{
+		printf("Funkcja fopen() zwróciła błąd\n");
+		return NULL;
+	}
+
+	while(flock(fileno(fp_in), LOCK_EX) != 0);
+
+	while(getline(&line, &len, fp_in) != -1)
+	{
+		if(strncmp(subscriber_ip, line, strlen(subscriber_ip)) != 0)
+			fwrite(line, sizeof(char), strlen(line), fp_out);
+	}
+
+	flock(fileno(fp_in), LOCK_UN);
+	fclose(fp_out);
+	fclose(fp_in);
+	sprintf(cmd, "mv %s %s", file_name_out, file_name_in);
+	system(cmd);
+	free(line);
+
 	return NULL;
 }
 
