@@ -162,6 +162,11 @@ void* handle_pub_request(void *data)
 	return NULL;
 }
 
+void* handle_unsub_request(void *data)
+{
+	return NULL;
+}
+
 void handle_connection(int fd, struct sockaddr_in addr)
 {
 	pthread_t thread;
@@ -199,6 +204,15 @@ void handle_connection(int fd, struct sockaddr_in addr)
 		data->publisher = addr;
 		if(pthread_create(&thread, NULL, handle_pub_request, data) != 0)
 			printf("Funkcja pthread_create() zwróciła błąd\n");
+	}
+	else if(buf[0] == 'u')
+	{
+		struct sub_req_data *data;
+		data = malloc(sizeof(struct sub_req_data));
+		data->client = addr;
+		strcpy(data->topic, topic);
+		if(pthread_create(&thread, NULL, handle_unsub_request, data) != 0)
+			printf("Funckja pthread_create() zwrócieła błąd\n");
 	}
 	else
 		printf("Nieprawidłowe żądanie od klienta\n");
