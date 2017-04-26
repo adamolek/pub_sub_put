@@ -95,7 +95,7 @@ void* handle_sub_request(void *data)
 		memset(buf, '\0', 32);
 		sprintf(buf, "%s\n", inet_ntoa(sub_data->client.sin_addr));
 		fd = open(file_name, O_WRONLY | O_APPEND);
-		flock(fd, LOCK_EX);
+		while(flock(fd, LOCK_EX) != 0);
 		write(fd, buf, strlen(buf));
 		flock(fd, LOCK_UN);
 		close(fd);
